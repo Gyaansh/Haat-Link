@@ -9,6 +9,8 @@ import { validateCrop } from '../../utils/validation';
  *
  * Props:
  *   onClose — called when form is dismissed (cancel or after save)
+ *
+ * On save, calls addCrop() from AppContext which POSTs to the API.
  */
 export function CropForm({ onClose }) {
   const { addCrop } = useApp();
@@ -23,14 +25,29 @@ export function CropForm({ onClose }) {
   });
 
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const nextErrors = validateCrop(form);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    addCrop({ ...form, quantity: +form.quantity, price: +form.price || 0 });
-    onClose();
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await addCrop({
+        ...form,
+        quantity: +form.quantity,
+        price: +form.price || 0,
+      });
+      onClose();
+    } catch (err) {
+      setSubmitError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -112,7 +129,16 @@ export function CropForm({ onClose }) {
           </select>
           <FieldError>{errors.status}</FieldError>
         </label>
-        <button className="primary">Save crop</button>
+
+        {submitError && (
+          <p style={{ color: 'var(--danger, #e53e3e)', fontSize: '0.875rem' }}>
+            {submitError}
+          </p>
+        )}
+
+        <button className="primary" disabled={submitting}>
+          {submitting ? 'Saving…' : 'Save crop'}
+        </button>
       </form>
     </Modal>
   );

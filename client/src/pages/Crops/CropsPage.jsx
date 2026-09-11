@@ -8,13 +8,14 @@ import { CropForm } from './CropForm';
 /**
  * CropsPage — Farmer Inventory / My Crops.
  *
- * Lists all crops from AppContext with View, Edit, and Find Buyers per card.
- * "+ Add Crop" button opens CropForm modal.
+ * Lists all crops from AppContext (sourced from MongoDB via API).
+ * "Add Crop" opens CropForm modal.
+ * Each card has View, Edit, and Find Buyers actions.
  */
 export function CropsPage() {
-  const { crops, setSelectedCrop } = useApp(),
-    n = useNavigate(),
-    [addOpen, setAddOpen] = useState(false);
+  const { crops, cropsLoading, cropsError, setSelectedCrop } = useApp();
+  const n = useNavigate();
+  const [addOpen, setAddOpen] = useState(false);
 
   return (
     <>
@@ -27,18 +28,36 @@ export function CropsPage() {
           </button>
         }
       />
-      <section className="crop-grid">
-        {crops.map((c) => (
-          <CropCard
-            key={c.id}
-            crop={c}
-            onFindBuyers={() => {
-              setSelectedCrop(c.id);
-              n(`/buyers?crop=${c.id}`);
-            }}
-          />
-        ))}
-      </section>
+
+      {cropsLoading && <p className="intro">Loading crops…</p>}
+
+      {cropsError && (
+        <p className="intro" style={{ color: 'var(--danger, #e53e3e)' }}>
+          Failed to load crops: {cropsError}
+        </p>
+      )}
+
+      {!cropsLoading && !cropsError && crops.length === 0 && (
+        <p className="intro" style={{ opacity: 0.6 }}>
+          You have no crops yet. Add your first crop to get started.
+        </p>
+      )}
+
+      {!cropsLoading && !cropsError && crops.length > 0 && (
+        <section className="crop-grid">
+          {crops.map((c) => (
+            <CropCard
+              key={c._id}
+              crop={c}
+              onFindBuyers={() => {
+                setSelectedCrop(c._id);
+                n(`/buyers?crop=${c._id}`);
+              }}
+            />
+          ))}
+        </section>
+      )}
+
       {addOpen && <CropForm onClose={() => setAddOpen(false)} />}
     </>
   );

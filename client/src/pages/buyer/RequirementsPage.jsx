@@ -9,9 +9,16 @@ import { FieldError } from '../../components/common/FieldError';
 import { StatusBadge } from '../../components/common/StatusBadge';
 
 export function RequirementsPage() {
-  const { requirements, createRequirement } = useApp();
+  const {
+    requirements,
+    requirementsLoading,
+    requirementsError,
+    createRequirement,
+  } = useApp();
   const [creating, setCreating] = useState(false);
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   const [form, setForm] = useState({
     crop: '',
     quantity: '',
@@ -25,20 +32,39 @@ export function RequirementsPage() {
 
   const updateField = (field, value) => setForm({ ...form, [field]: value });
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const nextErrors = validateRequirement(form);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    createRequirement({
-      ...form,
-      quantity: Number(form.quantity),
-      offeredPrice: Number(form.offeredPrice),
-      location: form.location.trim(),
-      notes: form.notes.trim(),
-    });
-    setCreating(false);
-    setErrors({});
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await createRequirement({
+        ...form,
+        quantity: Number(form.quantity),
+        offeredPrice: Number(form.offeredPrice),
+        location: form.location.trim(),
+        notes: form.notes.trim(),
+      });
+      setCreating(false);
+      setErrors({});
+      setForm({
+        crop: '',
+        quantity: '',
+        quality: '',
+        offeredPrice: '',
+        requiredBy: '',
+        location: '',
+        paymentTerms: '',
+        notes: '',
+      });
+    } catch (err) {
+      setSubmitError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -52,28 +78,51 @@ export function RequirementsPage() {
           </button>
         }
       />
-      <section className="crop-grid">
-        {requirements.map((r) => (
-          <article className="card" key={r.id}>
-            <StatusBadge>{r.status}</StatusBadge>
-            <h2>{r.crop}</h2>
-            <p>
-              {r.quality} · Required by {formatDate(r.requiredBy)}
-            </p>
-            <div className="requirement">
-              <strong>
-                {r.received}/{r.quantity} q received
-              </strong>
-              <i>
-                <b style={{ width: `${(r.received / r.quantity) * 100}%` }} />
-              </i>
-            </div>
-            <p className="requirement-meta">
-              {money(r.offeredPrice)}/q · {r.location} · {r.paymentTerms}
-            </p>
-          </article>
-        ))}
-      </section>
+
+      {requirementsLoading && <p className="intro">Loading requirements…</p>}
+
+      {requirementsError && (
+        <p className="intro" style={{ color: 'var(--danger, #e53e3e)' }}>
+          Failed to load requirements: {requirementsError}
+        </p>
+      )}
+
+      {!requirementsLoading &&
+        !requirementsError &&
+        requirements.length === 0 && (
+          <p className="intro" style={{ opacity: 0.6 }}>
+            No requirements yet. Add your first procurement requirement.
+          </p>
+        )}
+
+      {!requirementsLoading &&
+        !requirementsError &&
+        requirements.length > 0 && (
+          <section className="crop-grid">
+            {requirements.map((r) => (
+              <article className="card" key={r._id}>
+                <StatusBadge>{r.status}</StatusBadge>
+                <h2>{r.crop}</h2>
+                <p>
+                  {r.quality} · Required by {formatDate(r.requiredBy)}
+                </p>
+                <div className="requirement">
+                  <strong>
+                    {r.received}/{r.quantity} q received
+                  </strong>
+                  <i>
+                    <b
+                      style={{ width: `${(r.received / r.quantity) * 100}%` }}
+                    />
+                  </i>
+                </div>
+                <p className="requirement-meta">
+                  {money(r.offeredPrice)}/q · {r.location} · {r.paymentTerms}
+                </p>
+              </article>
+            ))}
+          </section>
+        )}
 
       {creating && (
         <Modal title="New Requirement" onClose={() => setCreating(false)}>
@@ -173,7 +222,21 @@ export function RequirementsPage() {
               />
               <FieldError>{errors.notes}</FieldError>
             </label>
-            <button className="primary">Create requirement</button>
+
+            {submitError && (
+              <p
+                style={{
+                  color: 'var(--danger, #e53e3e)',
+                  fontSize: '0.875rem',
+                }}
+              >
+                {submitError}
+              </p>
+            )}
+
+            <button className="primary" disabled={submitting}>
+              {submitting ? 'Creating…' : 'Create requirement'}
+            </button>
           </form>
         </Modal>
       )}

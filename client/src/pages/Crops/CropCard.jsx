@@ -1,10 +1,6 @@
 import { useState } from 'react';
-import { useApp } from '../../context/AppContext';
-import { Modal } from '../../components/common/Modal';
-import { FieldError } from '../../components/common/FieldError';
 import { formatDate } from '../../utils/validation';
 import { money } from '../../utils/format';
-import { validateCrop } from '../../utils/validation';
 import { CropDetailsModal } from './CropDetailsModal';
 import { CropEditModal } from './CropEditModal';
 import { StatusBadge } from '../../components/common/StatusBadge';

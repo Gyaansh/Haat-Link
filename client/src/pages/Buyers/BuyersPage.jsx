@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { buyers } from '../../data/mockData';
+import { getBuyers } from '../../services/buyerService';
+import { getCropTypes } from '../../services/cropService';
 import { rankedBuyers } from '../../utils/recommendation';
 import { validateOffer } from '../../utils/validation';
 import { money } from '../../utils/format';
@@ -10,37 +11,100 @@ import { Modal } from '../../components/common/Modal';
 import { FieldError } from '../../components/common/FieldError';
 
 export function BuyersPage() {
-  const { crops, selectedCrop, setSelectedCrop, createOffer } = useApp(),
-    n = useNavigate(),
-    [params] = useSearchParams(),
-    cropId = params.get('crop') || selectedCrop,
-    crop = crops.find((c) => c.id === cropId) || crops[0],
-    [detail, setDetail] = useState(null),
-    [offer, setOffer] = useState(null),
-    [form, setForm] = useState({
-      quantity: crop?.quantity || 80,
-      price: '2700',
-      message: 'I can supply Grade A produce from Nashik.',
-    }),
-    [errors, setErrors] = useState({});
+  const { crops, selectedCrop, setSelectedCrop, createOffer } = useApp();
+  const n = useNavigate();
+  const [params] = useSearchParams();
+
+  const [cropTypes, setCropTypes] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    getCropTypes()
+      .then((types) => {
+        if (mounted && Array.isArray(types)) {
+          setCropTypes(types);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const paramCrop = params.get('crop') || selectedCrop;
+  // Match by id or by name
+  const crop =
+    crops.find(
+      (c) =>
+        c._id === paramCrop || c.name.toLowerCase() === paramCrop?.toLowerCase()
+    ) || crops[0];
+
+  const [buyers, setBuyers] = useState([]);
+  const [buyersLoading, setBuyersLoading] = useState(true);
+  const [buyersError, setBuyersError] = useState(null);
+
+  const [detail, setDetail] = useState(null);
+  const [offer, setOffer] = useState(null);
+  const [form, setForm] = useState({
+    quantity: crop?.quantity || 80,
+    price: '2700',
+    message: 'I can supply Grade A produce from Nashik.',
+  });
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+
+  // Fetch buyers whenever the selected crop changes
+  useEffect(() => {
+    if (!crop) return;
+    setBuyersLoading(true);
+    setBuyersError(null);
+    getBuyers(crop.name)
+      .then((data) => setBuyers(data))
+      .catch((err) => setBuyersError(err.message))
+      .finally(() => setBuyersLoading(false));
+  }, [crop?.name]);
 
   const ranked = rankedBuyers(crop, buyers);
 
-  const submitOffer = (e) => {
+  const submitOffer = async (e) => {
     e.preventDefault();
     const nextErrors = validateOffer(form);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    createOffer({
-      ...form,
-      buyer: offer.name,
-      crop: crop.name,
-      quantity: +form.quantity,
-      price: +form.price,
-    });
-    setOffer(null);
-    setErrors({});
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await createOffer({
+        ...form,
+        buyer: offer.name,
+        crop: crop.name,
+        quantity: +form.quantity,
+        price: +form.price,
+      });
+      setOffer(null);
+      setErrors({});
+    } catch (err) {
+      setSubmitError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (!crop) {
+    return (
+      <>
+        <PageTitle kicker="BUYER MARKETPLACE" title="Buyers" />
+        <p className="intro">No crops found. Add a crop first.</p>
+      </>
+    );
+  }
+
+  const availableCropTypes =
+    cropTypes.length > 0
+      ? cropTypes
+      : Array.from(new Set(crops.map((c) => c.name)));
 
   return (
     <>
@@ -49,15 +113,15 @@ export function BuyersPage() {
         title={`Buyers for ${crop.name}`}
         action={
           <select
-            value={crop.id}
+            value={crop.name}
             onChange={(e) => {
               setSelectedCrop(e.target.value);
-              n(`/buyers?crop=${e.target.value}`);
+              n(`/buyers?crop=${encodeURIComponent(e.target.value)}`);
             }}
           >
-            {crops.map((c) => (
-              <option value={c.id} key={c.id}>
-                {c.name}
+            {availableCropTypes.map((name) => (
+              <option value={name} key={name}>
+                {name}
               </option>
             ))}
           </select>
@@ -67,49 +131,66 @@ export function BuyersPage() {
         Ranked by price, quantity fit, distance, quality, pickup and payment
         reliability.
       </p>
-      <section className="buyer-grid">
-        {ranked.map((b) => (
-          <article className="card buyer-card" key={b.id}>
-            <div className="buyer-head">
-              <span>
-                <b>{b.name.slice(0, 2).toUpperCase()}</b>
-                <strong>{b.name}</strong>
-                <small>{b.verified ? 'Verified buyer' : 'New buyer'}</small>
-              </span>
-              <em>{b.match}% Match</em>
-            </div>
-            <div className="offer-price">
-              {money(b.price)}
-              <small>/ quintal</small>
-            </div>
-            <div className="buyer-meta">
-              <span>
-                Required <b>{b.required} q</b>
-              </span>
-              <span>
-                Quality <b>{b.quality}</b>
-              </span>
-              <span>
-                Pickup <b>{b.pickup ? 'Available' : 'Not available'}</b>
-              </span>
-              <span>
-                Payment <b>{b.paymentDays} days</b>
-              </span>
-              <span>
-                Trust <b>{b.trust}/100</b>
-              </span>
-            </div>
-            <div className="actions">
-              <button className="secondary" onClick={() => setDetail(b)}>
-                View Details
-              </button>
-              <button className="primary" onClick={() => setOffer(b)}>
-                Make Offer
-              </button>
-            </div>
-          </article>
-        ))}
-      </section>
+
+      {buyersLoading && <p className="intro">Loading buyers…</p>}
+
+      {buyersError && (
+        <p className="intro" style={{ color: 'var(--danger, #e53e3e)' }}>
+          Failed to load buyers: {buyersError}
+        </p>
+      )}
+
+      {!buyersLoading && !buyersError && ranked.length === 0 && (
+        <p className="intro" style={{ opacity: 0.6 }}>
+          No buyers found for {crop.name}.
+        </p>
+      )}
+
+      {!buyersLoading && !buyersError && ranked.length > 0 && (
+        <section className="buyer-grid">
+          {ranked.map((b) => (
+            <article className="card buyer-card" key={b._id}>
+              <div className="buyer-head">
+                <span>
+                  <b>{b.name.slice(0, 2).toUpperCase()}</b>
+                  <strong>{b.name}</strong>
+                  <small>{b.verified ? 'Verified buyer' : 'New buyer'}</small>
+                </span>
+                <em>{b.match}% Match</em>
+              </div>
+              <div className="offer-price">
+                {money(b.price)}
+                <small>/ quintal</small>
+              </div>
+              <div className="buyer-meta">
+                <span>
+                  Required <b>{b.required} q</b>
+                </span>
+                <span>
+                  Quality <b>{b.quality}</b>
+                </span>
+                <span>
+                  Pickup <b>{b.pickup ? 'Available' : 'Not available'}</b>
+                </span>
+                <span>
+                  Payment <b>{b.paymentDays} days</b>
+                </span>
+                <span>
+                  Trust <b>{b.trust}/100</b>
+                </span>
+              </div>
+              <div className="actions">
+                <button className="secondary" onClick={() => setDetail(b)}>
+                  View Details
+                </button>
+                <button className="primary" onClick={() => setOffer(b)}>
+                  Make Offer
+                </button>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
 
       {detail && (
         <Modal title={detail.name} onClose={() => setDetail(null)}>
@@ -178,7 +259,19 @@ export function BuyersPage() {
               />
               <FieldError>{errors.message}</FieldError>
             </label>
-            <button className="primary">Submit offer</button>
+            {submitError && (
+              <p
+                style={{
+                  color: 'var(--danger, #e53e3e)',
+                  fontSize: '0.875rem',
+                }}
+              >
+                {submitError}
+              </p>
+            )}
+            <button className="primary" disabled={submitting}>
+              {submitting ? 'Submitting…' : 'Submit offer'}
+            </button>
           </form>
         </Modal>
       )}

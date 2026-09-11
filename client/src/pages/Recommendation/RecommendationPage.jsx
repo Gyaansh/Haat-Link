@@ -1,19 +1,63 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { buyers } from '../../data/mockData';
+import { getBuyers } from '../../services/buyerService';
 import { rankedBuyers } from '../../utils/recommendation';
 import { money } from '../../utils/format';
 import { PageTitle } from '../../components/common/PageTitle';
 import { Modal } from '../../components/common/Modal';
 
 export function RecommendationPage() {
-  const { crops, selectedCrop, createDeal } = useApp(),
-    n = useNavigate(),
-    crop = crops.find((c) => c.id === selectedCrop) || crops[0],
-    ranked = rankedBuyers(crop, buyers),
-    best = ranked[0],
-    [confirm, setConfirm] = useState(false);
+  const { crops, selectedCrop, createDeal } = useApp();
+  const n = useNavigate();
+
+  const crop = crops.find((c) => c._id === selectedCrop) || crops[0];
+
+  const [buyers, setBuyers] = useState([]);
+  const [buyersLoading, setBuyersLoading] = useState(true);
+  const [buyersError, setBuyersError] = useState(null);
+  const [confirm, setConfirm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState(null);
+
+  useEffect(() => {
+    if (!crop) return;
+    setBuyersLoading(true);
+    setBuyersError(null);
+    getBuyers(crop.name)
+      .then((data) => setBuyers(data))
+      .catch((err) => setBuyersError(err.message))
+      .finally(() => setBuyersLoading(false));
+  }, [crop?.name]);
+
+  const ranked = rankedBuyers(crop, buyers);
+  const best = ranked[0];
+
+  if (!crop || buyersLoading) {
+    return (
+      <>
+        <PageTitle
+          kicker="TRANSPARENT SMART MATCHING"
+          title="Smart selling recommendation"
+        />
+        <p className="intro">{!crop ? 'No crops found.' : 'Loading…'}</p>
+      </>
+    );
+  }
+
+  if (buyersError) {
+    return (
+      <>
+        <PageTitle
+          kicker="TRANSPARENT SMART MATCHING"
+          title="Smart selling recommendation"
+        />
+        <p className="intro" style={{ color: 'var(--danger, #e53e3e)' }}>
+          Failed to load buyers: {buyersError}
+        </p>
+      </>
+    );
+  }
 
   if (!best) {
     return (
@@ -26,16 +70,39 @@ export function RecommendationPage() {
           <span>⌁</span>
           <h2>No matching buyers for {crop.name} yet</h2>
           <p>
-            AgriLink does not have a compatible buyer requirement for this crop
-            in the current mock marketplace.
+            HaatLink does not have a compatible buyer requirement for this crop
+            in the current marketplace.
           </p>
-          <Link className="primary" to="/buyers?crop=onion">
-            View Onion buyers
+          <Link className="primary" to="/buyers">
+            View buyers
           </Link>
         </article>
       </>
     );
   }
+
+  const handleConfirmDeal = async () => {
+    setCreating(true);
+    setCreateError(null);
+    try {
+      await createDeal({
+        crop: crop.name,
+        quantity: crop.quantity,
+        buyer: best.name,
+        price: best.price,
+        total: best.price * crop.quantity,
+        status: 'Deal Created',
+        created: new Date().toISOString().slice(0, 10),
+        net: best.net,
+      });
+      setConfirm(false);
+      n('/deals');
+    } catch (err) {
+      setCreateError(err.message);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <>
@@ -106,7 +173,7 @@ export function RecommendationPage() {
             </div>
           </div>
           {ranked.slice(1).map((b) => (
-            <div className="alternative" key={b.id}>
+            <div className="alternative" key={b._id}>
               <span>
                 <b>{b.name}</b>
                 <small>{money(b.net)}/q net realization</small>
@@ -146,24 +213,22 @@ export function RecommendationPage() {
               <b>Estimated total value</b>
               <span>{money(best.price * crop.quantity)}</span>
             </p>
+            {createError && (
+              <p
+                style={{
+                  color: 'var(--danger, #e53e3e)',
+                  fontSize: '0.875rem',
+                }}
+              >
+                {createError}
+              </p>
+            )}
             <button
               className="primary"
-              onClick={() => {
-                createDeal({
-                  crop: crop.name,
-                  quantity: crop.quantity,
-                  buyer: best.name,
-                  price: best.price,
-                  total: best.price * crop.quantity,
-                  status: 'Deal Created',
-                  created: '11 Sep 2026',
-                  net: best.net,
-                });
-                setConfirm(false);
-                n('/deals');
-              }}
+              onClick={handleConfirmDeal}
+              disabled={creating}
             >
-              Confirm Deal
+              {creating ? 'Creating deal…' : 'Confirm Deal'}
             </button>
           </div>
         </Modal>

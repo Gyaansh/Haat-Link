@@ -1,263 +1,44 @@
-export const farmer = {
-  id: 'farmer-ramesh',
-  name: 'Ramesh Patil',
-  initials: 'RP',
-  location: 'Nashik, Maharashtra',
-  phone: '+91 98765 43120',
+/**
+ * mockData.js — retained ONLY for isolated price chart history data.
+ *
+ * PRICE CHART EXCEPTION (documented):
+ * The 7-day price history arrays below are intentionally hard-coded illustrative
+ * data. Building a real historical price database is out of scope for this
+ * SIH prototype phase. These arrays are isolated here so they can be connected
+ * to a MongoDB historical price collection in the future without touching any
+ * other application code.
+ *
+ * ALL OTHER application/business data (crops, buyers, markets, deals,
+ * requirements, offers, notifications) comes from MongoDB via the backend API.
+ * Do NOT add new business data arrays to this file.
+ */
+
+export const chartHistory = {
+  Onion: [
+    ['Monday', 2280],
+    ['Tuesday', 2320],
+    ['Wednesday', 2350],
+    ['Thursday', 2410],
+    ['Friday', 2420],
+    ['Saturday', 2450],
+    ['Sunday', 2480],
+  ],
+  Tomato: [
+    ['Monday', 1710],
+    ['Tuesday', 1735],
+    ['Wednesday', 1750],
+    ['Thursday', 1780],
+    ['Friday', 1805],
+    ['Saturday', 1820],
+    ['Sunday', 1850],
+  ],
+  Potato: [
+    ['Monday', 2010],
+    ['Tuesday', 1990],
+    ['Wednesday', 1980],
+    ['Thursday', 1975],
+    ['Friday', 1960],
+    ['Saturday', 1955],
+    ['Sunday', 1950],
+  ],
 };
-export const buyerUser = {
-  id: 'buyer-abc',
-  name: 'ABC Foods',
-  initials: 'AF',
-  location: 'Pune, Maharashtra',
-  phone: '+91 98765 98765',
-};
-export const initialCrops = [
-  {
-    id: 'onion',
-    name: 'Onion',
-    quantity: 80,
-    quality: 'Grade A',
-    harvestDate: '2026-09-08',
-    status: 'Ready to Sell',
-    price: 2450,
-    emoji: '🧅',
-  },
-  {
-    id: 'tomato',
-    name: 'Tomato',
-    quantity: 40,
-    quality: 'Grade A',
-    harvestDate: '2026-10-22',
-    status: 'Growing',
-    price: 1850,
-    emoji: '🍅',
-  },
-  {
-    id: 'potato',
-    name: 'Potato',
-    quantity: 60,
-    quality: 'Grade B',
-    harvestDate: '2026-09-04',
-    status: 'Ready to Sell',
-    price: 1950,
-    emoji: '🥔',
-  },
-];
-export const marketData = {
-  Onion: {
-    average: 2480,
-    change: 8.4,
-    predicted: 2650,
-    demand: 'High',
-    history: [
-      ['Monday', 2280],
-      ['Tuesday', 2320],
-      ['Wednesday', 2350],
-      ['Thursday', 2410],
-      ['Friday', 2420],
-      ['Saturday', 2450],
-      ['Sunday', 2480],
-    ],
-    markets: [
-      ['Nashik APMC', 2450, '18 km'],
-      ['Pune APMC', 2620, '165 km'],
-      ['Mumbai Market', 2700, '170 km'],
-      ['Ahmednagar APMC', 2520, '120 km'],
-    ],
-  },
-  Tomato: {
-    average: 1850,
-    change: 3.1,
-    predicted: 1910,
-    demand: 'Moderate',
-    history: [
-      ['Monday', 1710],
-      ['Tuesday', 1735],
-      ['Wednesday', 1750],
-      ['Thursday', 1780],
-      ['Friday', 1805],
-      ['Saturday', 1820],
-      ['Sunday', 1850],
-    ],
-    markets: [
-      ['Nashik APMC', 1850, '18 km'],
-      ['Pune APMC', 1900, '165 km'],
-      ['Mumbai Market', 1980, '170 km'],
-    ],
-  },
-  Potato: {
-    average: 1950,
-    change: -1.8,
-    predicted: 1900,
-    demand: 'Moderate',
-    history: [
-      ['Monday', 2010],
-      ['Tuesday', 1990],
-      ['Wednesday', 1980],
-      ['Thursday', 1975],
-      ['Friday', 1960],
-      ['Saturday', 1955],
-      ['Sunday', 1950],
-    ],
-    markets: [
-      ['Nashik APMC', 1950, '18 km'],
-      ['Pune APMC', 2020, '165 km'],
-      ['Mumbai Market', 2080, '170 km'],
-    ],
-  },
-};
-export const buyers = [
-  {
-    id: 'abc',
-    name: 'ABC Foods',
-    crop: 'Onion',
-    price: 2700,
-    required: 100,
-    quality: 'Grade A',
-    pickup: true,
-    paymentDays: 3,
-    trust: 94,
-    distance: 170,
-    transport: 160,
-    handling: 20,
-    verified: true,
-  },
-  {
-    id: 'freshmart',
-    name: 'FreshMart Retail',
-    crop: 'Onion',
-    price: 2670,
-    required: 80,
-    quality: 'Grade A',
-    pickup: true,
-    paymentDays: 5,
-    trust: 86,
-    distance: 165,
-    transport: 145,
-    handling: 20,
-    verified: true,
-  },
-  {
-    id: 'nashik-fresh',
-    name: 'Nashik Fresh Produce',
-    crop: 'Onion',
-    price: 2540,
-    required: 120,
-    quality: 'Grade A',
-    pickup: false,
-    paymentDays: 2,
-    trust: 91,
-    distance: 24,
-    transport: 28,
-    handling: 15,
-    verified: true,
-  },
-  {
-    id: 'xyz',
-    name: 'XYZ Agro Exports',
-    crop: 'Onion',
-    price: 2620,
-    required: 60,
-    quality: 'Grade A',
-    pickup: true,
-    paymentDays: 7,
-    trust: 89,
-    distance: 120,
-    transport: 105,
-    handling: 20,
-    verified: true,
-  },
-  {
-    id: 'greenbasket',
-    name: 'GreenBasket Foods',
-    crop: 'Onion',
-    price: 2590,
-    required: 90,
-    quality: 'Grade B',
-    pickup: false,
-    paymentDays: 4,
-    trust: 82,
-    distance: 85,
-    transport: 75,
-    handling: 18,
-    verified: false,
-  },
-];
-export const initialDeals = [
-  {
-    id: 'AGR-10482',
-    crop: 'Onion',
-    quantity: 80,
-    buyer: 'ABC Foods',
-    price: 2700,
-    total: 216000,
-    status: 'Pickup Scheduled',
-    created: '2026-09-10',
-    net: 2520,
-  },
-];
-export const notifications = [
-  {
-    id: 1,
-    title: 'Onion prices are rising',
-    text: 'Nashik APMC gained 8.4% this week.',
-    time: '1h ago',
-  },
-  {
-    id: 2,
-    title: 'Buyer match found',
-    text: 'ABC Foods is a strong match for your Onion.',
-    time: '3h ago',
-  },
-];
-export const buyerRequirements = [
-  {
-    id: 'REQ-1001',
-    buyerId: 'buyer-abc',
-    crop: 'Onion',
-    quantity: 500,
-    received: 320,
-    quality: 'Grade A',
-    offeredPrice: 2700,
-    requiredBy: '2026-09-22',
-    location: 'Pune, Maharashtra',
-    paymentTerms: 'Within 7 days',
-    notes: 'Farm pickup preferred for Grade A produce.',
-    status: 'Active',
-    createdAt: '2026-09-11',
-  },
-  {
-    id: 'REQ-1002',
-    buyerId: 'buyer-abc',
-    crop: 'Tomato',
-    quantity: 200,
-    received: 90,
-    quality: 'Grade A',
-    offeredPrice: 1900,
-    requiredBy: '2026-09-29',
-    location: 'Pune, Maharashtra',
-    paymentTerms: 'Within 7 days',
-    notes: '',
-    status: 'Active',
-    createdAt: '2026-09-11',
-  },
-];
-export const incomingOffers = [
-  {
-    id: 'OFF-2081',
-    farmer: 'Nashik FPO',
-    crop: 'Onion',
-    quantity: 100,
-    quality: 'Grade A',
-    price: 2580,
-  },
-  {
-    id: 'OFF-2082',
-    farmer: 'Ramesh Patil',
-    crop: 'Onion',
-    quantity: 80,
-    quality: 'Grade A',
-    price: 2700,
-  },
-];

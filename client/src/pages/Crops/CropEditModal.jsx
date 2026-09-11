@@ -8,12 +8,12 @@ import { validateCrop } from '../../utils/validation';
  * CropEditModal — pre-filled edit form for an existing crop.
  *
  * Props:
- *   crop    — current crop object (used to populate initial form state)
+ *   crop    — current crop object from MongoDB (contains _id)
  *   onClose — called on Cancel and after a successful save
  *
  * On Save Changes:
  *   - validates all fields
- *   - calls updateCrop from AppContext
+ *   - calls updateCrop from AppContext (PUT /api/crops/:id)
  *   - shows toast "Crop updated successfully."
  *   - closes the modal
  *
@@ -33,22 +33,33 @@ export function CropEditModal({ crop, onClose }) {
   });
 
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const nextErrors = validateCrop(form);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    updateCrop(crop.id, {
-      name: form.name,
-      quantity: Number(form.quantity),
-      quality: form.quality,
-      harvestDate: form.harvestDate,
-      status: form.status,
-      price: Number(form.price) || 0,
-    });
-    setToast('Crop updated successfully.');
-    onClose();
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await updateCrop(crop._id, {
+        name: form.name,
+        quantity: Number(form.quantity),
+        quality: form.quality,
+        harvestDate: form.harvestDate,
+        status: form.status,
+        price: Number(form.price) || 0,
+      });
+      setToast('Crop updated successfully.');
+      onClose();
+    } catch (err) {
+      setSubmitError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -130,12 +141,19 @@ export function CropEditModal({ crop, onClose }) {
           />
           <FieldError>{errors.price}</FieldError>
         </label>
+
+        {submitError && (
+          <p style={{ color: 'var(--danger, #e53e3e)', fontSize: '0.875rem' }}>
+            {submitError}
+          </p>
+        )}
+
         <div className="actions">
           <button type="button" className="secondary" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="primary">
-            Save Changes
+          <button type="submit" className="primary" disabled={submitting}>
+            {submitting ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       </form>
