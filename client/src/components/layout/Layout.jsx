@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useApp } from '../context/AppContext';
-const links = [
+import { useApp } from '../../context/AppContext';
+
+const farmerLinks = [
   ['/dashboard', '▦', 'Dashboard'],
   ['/crops', '⌘', 'My Crops'],
   ['/market', '⌁', 'Market Intelligence'],
@@ -8,17 +9,19 @@ const links = [
   ['/recommendation', '✦', 'Smart Recommendation'],
   ['/deals', '▣', 'My Deals'],
 ];
+
+const buyerLinks = [
+  ['/buyer/dashboard', '▦', 'Dashboard'],
+  ['/buyer/requirements', '⌘', 'Requirements'],
+  ['/buyer/orders', '▣', 'Orders'],
+];
+
 function Frame({ buyer = false }) {
   const { farmer, buyerUser, setRole, toast, setToast } = useApp(),
     nav = useNavigate(),
     user = buyer ? buyerUser : farmer,
-    items = buyer
-      ? [
-          ['/buyer/dashboard', '▦', 'Dashboard'],
-          ['/buyer/requirements', '⌘', 'Requirements'],
-          ['/buyer/orders', '▣', 'Orders'],
-        ]
-      : links;
+    items = buyer ? buyerLinks : farmerLinks;
+
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -78,9 +81,11 @@ function Frame({ buyer = false }) {
     </div>
   );
 }
+
 export function Layout() {
   return <Frame />;
 }
+
 export function BuyerLayout() {
   return <Frame buyer />;
 }

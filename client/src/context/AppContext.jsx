@@ -12,13 +12,13 @@ import { isValidIsoDate } from '../utils/validation';
 const C = createContext(null);
 
 const read = (k, f) => {
-    try {
-      const value = JSON.parse(localStorage.getItem(k));
-      return Array.isArray(f) ? (Array.isArray(value) ? value : f) : value ?? f;
-    } catch {
-      return f;
-    }
-  };
+  try {
+    const value = JSON.parse(localStorage.getItem(k));
+    return Array.isArray(f) ? (Array.isArray(value) ? value : f) : (value ?? f);
+  } catch {
+    return f;
+  }
+};
 
 const validRequirements = (items) =>
   items.filter(
@@ -77,6 +77,8 @@ export function AppProvider({ children }) {
   );
   const addCrop = (c) =>
       setCrops((x) => [...x, { ...c, id: `crop-${Date.now()}`, emoji: '🌾' }]),
+    updateCrop = (id, patch) =>
+      setCrops((x) => x.map((c) => (c.id === id ? { ...c, ...patch } : c))),
     createOffer = (o) => {
       setOffers((x) => [
         { ...o, id: `OFF-${Date.now().toString().slice(-4)}` },
@@ -114,6 +116,7 @@ export function AppProvider({ children }) {
         setRole,
         crops,
         addCrop,
+        updateCrop,
         deals,
         createDeal,
         offers,

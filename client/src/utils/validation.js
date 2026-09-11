@@ -33,7 +33,8 @@ function positiveNumber(value, label, maximum) {
   if (!Number.isFinite(number) || number <= 0) {
     return `${label} must be greater than 0.`;
   }
-  if (number > maximum) return `${label} must not exceed ${maximum.toLocaleString()}.`;
+  if (number > maximum)
+    return `${label} must not exceed ${maximum.toLocaleString()}.`;
   return '';
 }
 
@@ -86,7 +87,8 @@ export function validateRequirement(form) {
     errors.requiredBy = 'Required-by date cannot be in the past.';
   }
   const location = form.location.trim();
-  if (location.length < 3) errors.location = 'Enter a location of at least 3 characters.';
+  if (location.length < 3)
+    errors.location = 'Enter a location of at least 3 characters.';
   if (!form.paymentTerms) errors.paymentTerms = 'Select payment terms.';
   if (form.notes && form.notes.trim().length > 500) {
     errors.notes = 'Notes must be 500 characters or fewer.';
