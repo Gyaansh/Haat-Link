@@ -6,6 +6,15 @@ import { PageTitle } from '../../components/common/PageTitle';
 import { Modal } from '../../components/common/Modal';
 import { FieldError } from '../../components/common/FieldError';
 
+/**
+ * Remove presentation suffix like "(buyer)" or "(Buyer)"
+ * without altering backend MongoDB records.
+ */
+const formatBuyerName = (name) => {
+  if (!name) return 'ABC Foods';
+  return name.replace(/\s*\(buyer\)/gi, '').trim() || 'ABC Foods';
+};
+
 export function BuyersPage() {
   const {
     requirements,
@@ -23,6 +32,7 @@ export function BuyersPage() {
   const [form, setForm] = useState({
     quantity: 80,
     price: '2700',
+    quality: 'Grade A',
     message: 'I can supply Grade A produce.',
   });
   const [errors, setErrors] = useState({});
@@ -34,11 +44,11 @@ export function BuyersPage() {
     fetchRequirements();
   }, [fetchRequirements]);
 
-  // Extract unique buyers from backend data without duplicates
+  // Extract unique buyers from backend data without duplicates and without (buyer) suffix
   const uniqueBuyers = Array.from(
     new Set(
       requirements
-        .map((r) => r.buyer || r.buyerId?.name || 'ABC Foods')
+        .map((r) => formatBuyerName(r.buyer || r.buyerId?.name))
         .filter(Boolean)
     )
   ).sort();
@@ -50,7 +60,7 @@ export function BuyersPage() {
 
   // Filter requirements based on selected buyer and crop
   const filteredRequirements = requirements.filter((r) => {
-    const buyerName = r.buyer || r.buyerId?.name || 'ABC Foods';
+    const buyerName = formatBuyerName(r.buyer || r.buyerId?.name);
     const matchesBuyer = selectedBuyer === 'all' || buyerName === selectedBuyer;
     const matchesCrop = selectedCrop === 'all' || r.crop === selectedCrop;
     return matchesBuyer && matchesCrop;
@@ -66,11 +76,15 @@ export function BuyersPage() {
     setSubmitError(null);
     try {
       await createOffer({
-        ...form,
-        buyer: offer.buyer || offer.buyerId?.name || 'ABC Foods',
+        requirementId: offer._id,
         crop: offer.crop,
+        cropId: offer.cropId,
+        buyer: formatBuyerName(offer.buyer || offer.buyerId?.name),
+        buyerId: offer.buyerId?._id || offer.buyerId,
+        quality: form.quality || offer.quality || 'Grade A',
         quantity: +form.quantity,
         price: +form.price,
+        message: form.message,
       });
       setOffer(null);
       setErrors({});
@@ -147,7 +161,7 @@ export function BuyersPage() {
         filteredRequirements.length > 0 && (
           <section className="buyer-grid">
             {filteredRequirements.map((r) => {
-              const buyerName = r.buyer || r.buyerId?.name || 'ABC Foods';
+              const buyerName = formatBuyerName(r.buyer || r.buyerId?.name);
               const initials = buyerName.slice(0, 2).toUpperCase();
 
               return (
@@ -158,8 +172,32 @@ export function BuyersPage() {
                       <strong>{buyerName}</strong>
                       <small>{r.status || 'Active'} requirement</small>
                     </span>
-                    <em>{r.crop}</em>
+                    <span className="status">{r.status || 'Active'}</span>
                   </div>
+
+                  <div style={{ margin: '14px 0 6px' }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        color: '#6e857a',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Requested Crop:
+                    </span>
+                    <h2
+                      style={{
+                        font: '700 22px Fraunces, serif',
+                        color: '#163300',
+                        margin: '2px 0 0',
+                      }}
+                    >
+                      {r.crop}
+                    </h2>
+                  </div>
+
                   <div className="offer-price">
                     {money(r.offeredPrice)}
                     <small>/ quintal</small>
@@ -169,7 +207,7 @@ export function BuyersPage() {
                       Required <b>{r.quantity} q</b>
                     </span>
                     <span>
-                      Quality <b>{r.quality}</b>
+                      Quality <b>{r.quality || 'Grade A'}</b>
                     </span>
                     <span>
                       Location <b>{r.location || 'Maharashtra'}</b>
@@ -192,11 +230,12 @@ export function BuyersPage() {
                           ...prev,
                           quantity: r.quantity,
                           price: r.offeredPrice || prev.price,
+                          quality: r.quality || prev.quality || 'Grade A',
                         }));
                         setOffer(r);
                       }}
                     >
-                      Make Offer
+                      Submit Offer
                     </button>
                   </div>
                 </article>
@@ -207,7 +246,10 @@ export function BuyersPage() {
 
       {detail && (
         <Modal
-          title={detail.buyer || 'Requirement Details'}
+          title={
+            formatBuyerName(detail.buyer || detail.buyerId?.name) ||
+            'Requirement Details'
+          }
           onClose={() => setDetail(null)}
         >
           <div className="detail">
@@ -223,13 +265,16 @@ export function BuyersPage() {
               {detail.received > 0 && ` (${detail.received} q fulfilled)`}
             </p>
             <p>
-              Quality specification: <strong>{detail.quality}</strong>
+              Quality specification:{' '}
+              <strong>{detail.quality || 'Grade A'}</strong>
             </p>
             <p>
-              Delivery location: <strong>{detail.location}</strong>
+              Delivery location:{' '}
+              <strong>{detail.location || 'Maharashtra'}</strong>
             </p>
             <p>
-              Payment terms: <strong>{detail.paymentTerms}</strong>
+              Payment terms:{' '}
+              <strong>{detail.paymentTerms || 'Within 7 days'}</strong>
             </p>
             <p>
               Required by deadline:{' '}
@@ -248,12 +293,13 @@ export function BuyersPage() {
                   ...prev,
                   quantity: target.quantity,
                   price: target.offeredPrice || prev.price,
+                  quality: target.quality || prev.quality || 'Grade A',
                 }));
                 setDetail(null);
                 setOffer(target);
               }}
             >
-              Make offer
+              Submit Offer
             </button>
           </div>
         </Modal>
@@ -261,7 +307,7 @@ export function BuyersPage() {
 
       {offer && (
         <Modal
-          title={`Offer to ${offer.buyer || 'Buyer'}`}
+          title={`Offer to ${formatBuyerName(offer.buyer || offer.buyerId?.name)}`}
           onClose={() => setOffer(null)}
         >
           <form className="form" onSubmit={submitOffer}>
@@ -294,6 +340,14 @@ export function BuyersPage() {
               <FieldError>{errors.price}</FieldError>
             </label>
             <label>
+              Quality
+              <input
+                type="text"
+                value={form.quality || offer.quality || 'Grade A'}
+                onChange={(e) => setForm({ ...form, quality: e.target.value })}
+              />
+            </label>
+            <label>
               Message
               <textarea
                 maxLength="500"
@@ -314,7 +368,7 @@ export function BuyersPage() {
               </p>
             )}
             <button className="primary" disabled={submitting}>
-              {submitting ? 'Submitting…' : 'Submit offer'}
+              {submitting ? 'Submitting…' : 'Submit Offer'}
             </button>
           </form>
         </Modal>

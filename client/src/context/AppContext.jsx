@@ -48,10 +48,7 @@ export function AppProvider({ children }) {
 
   const activeBuyer = user
     ? {
-        name:
-          user.role === 'buyer'
-            ? user.name || user.username
-            : `${user.name || user.username} (Buyer)`,
+        name: user.name || user.username,
         initials: getInitials(user.name || user.username),
         location: 'Maharashtra, India',
         phone: user.phone || '+91 98765 98765',
@@ -199,12 +196,13 @@ export function AppProvider({ children }) {
     async (offerData) => {
       const created = await offerService.createOffer({
         ...offerData,
-        farmer: activeFarmer.name,
+        farmer: user?.name || activeFarmer.name,
+        farmerId: user?.id,
       });
       setOffers((prev) => [created, ...prev]);
       setToast('Offer submitted successfully.');
     },
-    [activeFarmer.name]
+    [user, activeFarmer.name]
   );
 
   const createRequirement = useCallback(

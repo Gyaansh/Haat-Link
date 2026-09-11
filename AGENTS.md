@@ -31,6 +31,9 @@ They must be followed by every developer and AI coding agent.
 17. **Never drop/drop collections/delete all documents/reset MongoDB as part of a normal coding task.**
 18. **Do not replace existing MongoDB data with fake data.**
 19. **Buyer requirements are MongoDB-backed marketplace records and must be visible to farmers through the backend API. Farmer and Buyer perspectives must never maintain separate hard-coded copies of marketplace data.**
+20. **Farmer requirements view must display the crop associated with each requirement prominently.**
+21. **Offers must be persisted to MongoDB and reference the appropriate requirement, buyer, farmer, and crop entities.**
+22. **Do not hide backend failures by changing frontend error messages; investigate and fix the actual API/database failure.**
 
 ---
 
