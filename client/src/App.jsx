@@ -1,35 +1,43 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-
-function App() {
-  const [count, setCount] = useState(0)
-
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AppProvider } from './context/AppContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { Layout, BuyerLayout } from './components/Layout';
+import {
+  Login,
+  Dashboard,
+  Crops,
+  Market,
+  Buyers,
+  Recommendation,
+  Deals,
+  BuyerDashboard,
+  Requirements,
+  Orders,
+} from './pages/Pages';
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <ErrorBoundary>
+      <AppProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route element={<Layout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/crops" element={<Crops />} />
+              <Route path="/market" element={<Market />} />
+              <Route path="/buyers" element={<Buyers />} />
+              <Route path="/recommendation" element={<Recommendation />} />
+              <Route path="/deals" element={<Deals />} />
+            </Route>
+            <Route path="/buyer" element={<BuyerLayout />}>
+              <Route path="dashboard" element={<BuyerDashboard />} />
+              <Route path="requirements" element={<Requirements />} />
+              <Route path="orders" element={<Orders />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AppProvider>
+    </ErrorBoundary>
+  );
 }
-
-export default App
