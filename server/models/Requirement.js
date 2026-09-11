@@ -12,6 +12,8 @@ const requirementSchema = new mongoose.Schema(
     paymentTerms: { type: String, required: true, trim: true },
     notes: { type: String, default: '', trim: true },
     status: { type: String, default: 'Active', trim: true },
+    buyer: { type: String, required: true, trim: true, default: 'ABC Foods' },
+    buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }
 );

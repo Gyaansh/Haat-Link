@@ -1,71 +1,60 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { getBuyers } from '../../services/buyerService';
-import { getCropTypes } from '../../services/cropService';
-import { rankedBuyers } from '../../utils/recommendation';
-import { validateOffer } from '../../utils/validation';
+import { validateOffer, formatDate } from '../../utils/validation';
 import { money } from '../../utils/format';
 import { PageTitle } from '../../components/common/PageTitle';
 import { Modal } from '../../components/common/Modal';
 import { FieldError } from '../../components/common/FieldError';
 
 export function BuyersPage() {
-  const { crops, selectedCrop, setSelectedCrop, createOffer } = useApp();
-  const n = useNavigate();
-  const [params] = useSearchParams();
+  const {
+    requirements,
+    requirementsLoading,
+    requirementsError,
+    fetchRequirements,
+    createOffer,
+  } = useApp();
 
-  const [cropTypes, setCropTypes] = useState([]);
-
-  useEffect(() => {
-    let mounted = true;
-    getCropTypes()
-      .then((types) => {
-        if (mounted && Array.isArray(types)) {
-          setCropTypes(types);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const paramCrop = params.get('crop') || selectedCrop;
-  // Match by id or by name
-  const crop =
-    crops.find(
-      (c) =>
-        c._id === paramCrop || c.name.toLowerCase() === paramCrop?.toLowerCase()
-    ) || crops[0];
-
-  const [buyers, setBuyers] = useState([]);
-  const [buyersLoading, setBuyersLoading] = useState(true);
-  const [buyersError, setBuyersError] = useState(null);
+  const [selectedBuyer, setSelectedBuyer] = useState('all');
+  const [selectedCrop, setSelectedCrop] = useState('all');
 
   const [detail, setDetail] = useState(null);
   const [offer, setOffer] = useState(null);
   const [form, setForm] = useState({
-    quantity: crop?.quantity || 80,
+    quantity: 80,
     price: '2700',
-    message: 'I can supply Grade A produce from Nashik.',
+    message: 'I can supply Grade A produce.',
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
-  // Fetch buyers whenever the selected crop changes
+  // Fetch requirements on mount to guarantee fresh MongoDB data
   useEffect(() => {
-    if (!crop) return;
-    setBuyersLoading(true);
-    setBuyersError(null);
-    getBuyers(crop.name)
-      .then((data) => setBuyers(data))
-      .catch((err) => setBuyersError(err.message))
-      .finally(() => setBuyersLoading(false));
-  }, [crop?.name]);
+    fetchRequirements();
+  }, [fetchRequirements]);
 
-  const ranked = rankedBuyers(crop, buyers);
+  // Extract unique buyers from backend data without duplicates
+  const uniqueBuyers = Array.from(
+    new Set(
+      requirements
+        .map((r) => r.buyer || r.buyerId?.name || 'ABC Foods')
+        .filter(Boolean)
+    )
+  ).sort();
+
+  // Extract unique crops from requirements
+  const uniqueCrops = Array.from(
+    new Set(requirements.map((r) => r.crop).filter(Boolean))
+  ).sort();
+
+  // Filter requirements based on selected buyer and crop
+  const filteredRequirements = requirements.filter((r) => {
+    const buyerName = r.buyer || r.buyerId?.name || 'ABC Foods';
+    const matchesBuyer = selectedBuyer === 'all' || buyerName === selectedBuyer;
+    const matchesCrop = selectedCrop === 'all' || r.crop === selectedCrop;
+    return matchesBuyer && matchesCrop;
+  });
 
   const submitOffer = async (e) => {
     e.preventDefault();
@@ -78,8 +67,8 @@ export function BuyersPage() {
     try {
       await createOffer({
         ...form,
-        buyer: offer.name,
-        crop: crop.name,
+        buyer: offer.buyer || offer.buyerId?.name || 'ABC Foods',
+        crop: offer.crop,
         quantity: +form.quantity,
         price: +form.price,
       });
@@ -92,128 +81,176 @@ export function BuyersPage() {
     }
   };
 
-  if (!crop) {
-    return (
-      <>
-        <PageTitle kicker="BUYER MARKETPLACE" title="Buyers" />
-        <p className="intro">No crops found. Add a crop first.</p>
-      </>
-    );
-  }
-
-  const availableCropTypes =
-    cropTypes.length > 0
-      ? cropTypes
-      : Array.from(new Set(crops.map((c) => c.name)));
-
   return (
     <>
       <PageTitle
         kicker="BUYER MARKETPLACE"
-        title={`Buyers for ${crop.name}`}
+        title={
+          selectedBuyer === 'all'
+            ? 'Buyer Requirements'
+            : `${selectedBuyer} Requirements`
+        }
         action={
-          <select
-            value={crop.name}
-            onChange={(e) => {
-              setSelectedCrop(e.target.value);
-              n(`/buyers?crop=${encodeURIComponent(e.target.value)}`);
-            }}
-          >
-            {availableCropTypes.map((name) => (
-              <option value={name} key={name}>
-                {name}
-              </option>
-            ))}
-          </select>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <select
+              value={selectedBuyer}
+              onChange={(e) => setSelectedBuyer(e.target.value)}
+              aria-label="Filter by buyer"
+            >
+              <option value="all">All</option>
+              {uniqueBuyers.map((bName) => (
+                <option value={bName} key={bName}>
+                  {bName}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedCrop}
+              onChange={(e) => setSelectedCrop(e.target.value)}
+              aria-label="Filter by crop"
+            >
+              <option value="all">All Crops</option>
+              {uniqueCrops.map((cName) => (
+                <option value={cName} key={cName}>
+                  {cName}
+                </option>
+              ))}
+            </select>
+          </div>
         }
       />
       <p className="intro">
-        Ranked by price, quantity fit, distance, quality, pickup and payment
-        reliability.
+        Browse active procurement requirements from verified institutional
+        buyers and submit direct supply offers.
       </p>
 
-      {buyersLoading && <p className="intro">Loading buyers…</p>}
+      {requirementsLoading && (
+        <p className="intro">Loading buyer requirements…</p>
+      )}
 
-      {buyersError && (
+      {requirementsError && (
         <p className="intro" style={{ color: 'var(--danger, #e53e3e)' }}>
-          Failed to load buyers: {buyersError}
+          Failed to load requirements: {requirementsError}
         </p>
       )}
 
-      {!buyersLoading && !buyersError && ranked.length === 0 && (
-        <p className="intro" style={{ opacity: 0.6 }}>
-          No buyers found for {crop.name}.
-        </p>
-      )}
+      {!requirementsLoading &&
+        !requirementsError &&
+        filteredRequirements.length === 0 && (
+          <p className="intro" style={{ opacity: 0.6 }}>
+            No requirements found for the selected filter.
+          </p>
+        )}
 
-      {!buyersLoading && !buyersError && ranked.length > 0 && (
-        <section className="buyer-grid">
-          {ranked.map((b) => (
-            <article className="card buyer-card" key={b._id}>
-              <div className="buyer-head">
-                <span>
-                  <b>{b.name.slice(0, 2).toUpperCase()}</b>
-                  <strong>{b.name}</strong>
-                  <small>{b.verified ? 'Verified buyer' : 'New buyer'}</small>
-                </span>
-                <em>{b.match}% Match</em>
-              </div>
-              <div className="offer-price">
-                {money(b.price)}
-                <small>/ quintal</small>
-              </div>
-              <div className="buyer-meta">
-                <span>
-                  Required <b>{b.required} q</b>
-                </span>
-                <span>
-                  Quality <b>{b.quality}</b>
-                </span>
-                <span>
-                  Pickup <b>{b.pickup ? 'Available' : 'Not available'}</b>
-                </span>
-                <span>
-                  Payment <b>{b.paymentDays} days</b>
-                </span>
-                <span>
-                  Trust <b>{b.trust}/100</b>
-                </span>
-              </div>
-              <div className="actions">
-                <button className="secondary" onClick={() => setDetail(b)}>
-                  View Details
-                </button>
-                <button className="primary" onClick={() => setOffer(b)}>
-                  Make Offer
-                </button>
-              </div>
-            </article>
-          ))}
-        </section>
-      )}
+      {!requirementsLoading &&
+        !requirementsError &&
+        filteredRequirements.length > 0 && (
+          <section className="buyer-grid">
+            {filteredRequirements.map((r) => {
+              const buyerName = r.buyer || r.buyerId?.name || 'ABC Foods';
+              const initials = buyerName.slice(0, 2).toUpperCase();
+
+              return (
+                <article className="card buyer-card" key={r._id}>
+                  <div className="buyer-head">
+                    <span>
+                      <b>{initials}</b>
+                      <strong>{buyerName}</strong>
+                      <small>{r.status || 'Active'} requirement</small>
+                    </span>
+                    <em>{r.crop}</em>
+                  </div>
+                  <div className="offer-price">
+                    {money(r.offeredPrice)}
+                    <small>/ quintal</small>
+                  </div>
+                  <div className="buyer-meta">
+                    <span>
+                      Required <b>{r.quantity} q</b>
+                    </span>
+                    <span>
+                      Quality <b>{r.quality}</b>
+                    </span>
+                    <span>
+                      Location <b>{r.location || 'Maharashtra'}</b>
+                    </span>
+                    <span>
+                      Payment <b>{r.paymentTerms || 'Within 7 days'}</b>
+                    </span>
+                    <span>
+                      Required by <b>{formatDate(r.requiredBy)}</b>
+                    </span>
+                  </div>
+                  <div className="actions">
+                    <button className="secondary" onClick={() => setDetail(r)}>
+                      View Details
+                    </button>
+                    <button
+                      className="primary"
+                      onClick={() => {
+                        setForm((prev) => ({
+                          ...prev,
+                          quantity: r.quantity,
+                          price: r.offeredPrice || prev.price,
+                        }));
+                        setOffer(r);
+                      }}
+                    >
+                      Make Offer
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+        )}
 
       {detail && (
-        <Modal title={detail.name} onClose={() => setDetail(null)}>
+        <Modal
+          title={detail.buyer || 'Requirement Details'}
+          onClose={() => setDetail(null)}
+        >
           <div className="detail">
             <p>
-              <b>{detail.verified ? '✓ Verified buyer' : 'Buyer profile'}</b>
+              <b>{detail.crop} Requirement</b> · Status:{' '}
+              <strong>{detail.status || 'Active'}</strong>
             </p>
             <p>
-              Listed price: <strong>{money(detail.price)}/q</strong>
+              Offered price: <strong>{money(detail.offeredPrice)}/q</strong>
             </p>
             <p>
-              Estimated transport: {money(detail.transport)}/q · Handling:{' '}
-              {money(detail.handling)}/q
+              Required quantity: <strong>{detail.quantity} quintals</strong>
+              {detail.received > 0 && ` (${detail.received} q fulfilled)`}
             </p>
             <p>
-              Trust score: {detail.trust}/100 · Payment in {detail.paymentDays}{' '}
-              days
+              Quality specification: <strong>{detail.quality}</strong>
             </p>
+            <p>
+              Delivery location: <strong>{detail.location}</strong>
+            </p>
+            <p>
+              Payment terms: <strong>{detail.paymentTerms}</strong>
+            </p>
+            <p>
+              Required by deadline:{' '}
+              <strong>{formatDate(detail.requiredBy)}</strong>
+            </p>
+            {detail.notes && (
+              <p>
+                Procurement notes: <em>"{detail.notes}"</em>
+              </p>
+            )}
             <button
               className="primary"
               onClick={() => {
+                const target = detail;
+                setForm((prev) => ({
+                  ...prev,
+                  quantity: target.quantity,
+                  price: target.offeredPrice || prev.price,
+                }));
                 setDetail(null);
-                setOffer(detail);
+                setOffer(target);
               }}
             >
               Make offer
@@ -223,8 +260,15 @@ export function BuyersPage() {
       )}
 
       {offer && (
-        <Modal title={`Offer to ${offer.name}`} onClose={() => setOffer(null)}>
+        <Modal
+          title={`Offer to ${offer.buyer || 'Buyer'}`}
+          onClose={() => setOffer(null)}
+        >
           <form className="form" onSubmit={submitOffer}>
+            <label>
+              Crop
+              <input type="text" value={offer.crop} disabled />
+            </label>
             <label>
               Quantity (quintals)
               <input

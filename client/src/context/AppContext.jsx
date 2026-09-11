@@ -212,13 +212,15 @@ export function AppProvider({ children }) {
       const created = await requirementService.createRequirement({
         ...requirementData,
         buyer: activeBuyer.name,
+        buyerId: user?.id,
         quantity: Number(requirementData.quantity),
         offeredPrice: Number(requirementData.offeredPrice),
       });
       setRequirements((prev) => [created, ...prev]);
       setToast('Requirement created successfully.');
+      return created;
     },
-    [activeBuyer.name]
+    [activeBuyer.name, user?.id]
   );
 
   return (
@@ -235,6 +237,7 @@ export function AppProvider({ children }) {
         addCrop,
         updateCrop,
         deleteCrop,
+        fetchCrops,
         // deals
         deals,
         dealsLoading,
@@ -250,6 +253,7 @@ export function AppProvider({ children }) {
         requirementsLoading,
         requirementsError,
         createRequirement,
+        fetchRequirements,
         // UI state
         selectedCrop,
         setSelectedCrop,

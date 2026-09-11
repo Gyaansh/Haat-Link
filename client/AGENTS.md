@@ -57,8 +57,8 @@ Follow them without exception, whether you are a human developer or an AI coding
     - `agrilink-selected-crop` — transient UI state
 
 15. **Use the services layer for all backend calls.** Never write `fetch('http://localhost:5000/...')` in a component directly.
-
-16. **The `services/` directory is the only place that communicates with the API.**
+16. **Buyer requirements are MongoDB-backed marketplace records and must be visible to farmers through the backend API. Farmer and Buyer perspectives must never maintain separate hard-coded copies of marketplace data.**
+17. **The `services/` directory is the only place that communicates with the API.**
 
 ### Service Layer
 17. `client/src/services/api.js` — base fetch wrapper (single source for BASE_URL, credentials: 'include')

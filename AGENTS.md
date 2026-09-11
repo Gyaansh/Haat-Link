@@ -30,6 +30,7 @@ They must be followed by every developer and AI coding agent.
 16. **Never hard-code MongoDB credentials.** Keep secrets in `.env`. Never commit `.env`.
 17. **Never drop/drop collections/delete all documents/reset MongoDB as part of a normal coding task.**
 18. **Do not replace existing MongoDB data with fake data.**
+19. **Buyer requirements are MongoDB-backed marketplace records and must be visible to farmers through the backend API. Farmer and Buyer perspectives must never maintain separate hard-coded copies of marketplace data.**
 
 ---
 

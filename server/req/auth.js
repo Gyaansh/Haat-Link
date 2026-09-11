@@ -22,3 +22,24 @@ export const authenticateToken = (req, res, next) => {
     next();
   });
 };
+
+export const optionalAuth = (req, res, next) => {
+  let token = req.cookies?.token;
+
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
+    return next();
+  }
+
+  const secret = process.env.JWT_SECRET || 'haatlink-dev-secret-change-in-production';
+
+  jwt.verify(token, secret, (err, decoded) => {
+    if (!err && decoded) {
+      req.user = decoded;
+    }
+    next();
+  });
+};
